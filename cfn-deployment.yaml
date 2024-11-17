@@ -1,0 +1,4 @@
+template-file-path: ./iQn.yaml
+tags:
+    cost-center: '93-4077'
+    org: 'AWS'
