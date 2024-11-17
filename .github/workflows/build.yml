@@ -20,8 +20,9 @@ jobs:
 
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - name: Checkout code from master branch
-        uses: actions/checkout@v2
+      
+      
+        
 
       # Configure AWS Credential
       - name: Configure AWS Credentials
@@ -29,6 +30,8 @@ jobs:
         with:
           role-to-assume: ${{ env.AWS_ROLE }}
           aws-region: ${{ env.AWS_REGION }}
+      - name: Run a one-line script
+        run: aws cloudformation create-stack --stack-name iQn --template-body file://iQn.yaml --capabilities CAPABILITY_NAMED_IAM --region us-east-1 --profile AWSAdministratorAccess-715841359129
 
       # Deploy VPC
       - name: Deploys my VPC
