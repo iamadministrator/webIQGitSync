@@ -19,6 +19,6 @@ jobs:
 
       # Runs a single command using the runners shell
       - name: Run a one-line script
-        run: aws cloudformation create-stack --stack-name iQn --template-body file://iOn.yaml --capabilities CAPABILITY_NAMED_IAM --region us-east-1 --profile AWSAdministratorAccess-715841359129
+        run: aws cloudformation create-stack --stack-name iQn --template-body file://iQn.yaml --capabilities CAPABILITY_NAMED_IAM --region us-east-1 --profile AWSAdministratorAccess-715841359129
 
 
