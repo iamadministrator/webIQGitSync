@@ -35,4 +35,4 @@ jobs:
           name: ${{ env.APP_NAME }}-vpc
           template: ./iQn.yaml
           no-fail-on-empty-changeset: "1"
-          parameter-overrides: AppName=${{ env.APP_NAME }, Environment=${{ env.ENVIRONMENT}}
+        #  parameter-overrides: AppName=${{ env.APP_NAME }, Environment=${{ env.ENVIRONMENT}}
