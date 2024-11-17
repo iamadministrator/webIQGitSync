@@ -1,0 +1,818 @@
+Parameters:
+
+  VpcCIDR:
+    Description: Please enter the IP range (CIDR notation) for this VPC
+    Type: String
+    Default: 10.0.0.0/16
+
+  PublicSubnet1CIDR:
+    Description: Please enter the IP range (CIDR notation) for the public subnet in the first Availability Zone
+    Type: String
+    Default: 10.0.0.0/24
+
+  PublicSubnet2CIDR:
+    Description: Please enter the IP range (CIDR notation) for the public subnet in the second Availability Zone
+    Type: String
+    Default: 10.0.1.0/24
+
+  PublicSubnet3CIDR:
+    Description: Please enter the IP range (CIDR notation) for the public subnet in the second Availability Zone
+    Type: String
+    Default: 10.0.2.0/24
+
+  PrivateSubnet1CIDR:
+    Description: Please enter the IP range (CIDR notation) for the private subnet in the first Availability Zone
+    Type: String
+    Default: 10.0.3.0/24
+
+  PrivateSubnet2CIDR:
+    Description: Please enter the IP range (CIDR notation) for the private subnet in the second Availability Zone
+    Type: String
+    Default: 10.0.4.0/24
+
+  PrivateSubnet3CIDR:
+    Description: Please enter the IP range (CIDR notation) for the private subnet in the second Availability Zone
+    Type: String
+    Default: 10.0.5.0/24
+
+  LatestLinux2AmiId:
+    Description: Region specific image from the Parameter Store
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+
+  ResourceName:
+    Type: String
+    Default: iO1
+    Description: Prefix of Resources created for this workshop.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "Resource Configuration"
+        Parameters:
+          - ResourceName
+    ParameterLabels:
+      ResourceName:
+        default: "Resource Prefix"
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+# Deleted - and 'VPC'
+          Value: !Join [ "", [!Ref ResourceName, ''] ]
+
+  VpcCidrBlockIpv6:
+    Type: AWS::EC2::VPCCidrBlock
+    Properties:
+      VpcId: !Ref VPC
+      AmazonProvidedIpv6CidrBlock: true
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+# Deleting the dash
+          Value: !Join ["." , [!Ref ResourceName, 'iGW'] ]
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    DependsOn: VpcCidrBlockIpv6
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, Fn::GetAZs: !Ref 'AWS::Region']
+      CidrBlock: !Ref PublicSubnet1CIDR
+      Ipv6CidrBlock: !Select [ 0, !Cidr [ !Select [ 0, !GetAtt VPC.Ipv6CidrBlocks], 256, 64 ]]
+      AssignIpv6AddressOnCreation: true
+      Tags:
+        - Key: Name
+# Changed AZ1b for !Ref "AWS::Region"
+          Value: iqn.iO1.WAN.00.1a
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    DependsOn: VpcCidrBlockIpv6
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, Fn::GetAZs: !Ref 'AWS::Region']
+      CidrBlock: !Ref PublicSubnet2CIDR
+      Ipv6CidrBlock: !Select [ 1, !Cidr [ !Select [ 0, !GetAtt VPC.Ipv6CidrBlocks], 256, 64 ]]
+      AssignIpv6AddressOnCreation: true
+      Tags:
+        - Key: Name
+          Value: iqn.iO1.WAN.01.1b
+
+  PublicSubnet3:
+    Type: AWS::EC2::Subnet
+    DependsOn: VpcCidrBlockIpv6
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 2, Fn::GetAZs: !Ref 'AWS::Region']
+      CidrBlock: !Ref PublicSubnet3CIDR
+      Ipv6CidrBlock: !Select [ 2, !Cidr [ !Select [ 0, !GetAtt VPC.Ipv6CidrBlocks], 256, 64 ]]
+      AssignIpv6AddressOnCreation: true
+      Tags:
+        - Key: Name
+          Value: iqn.iO1.WAN.02.1c
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    DependsOn: VpcCidrBlockIpv6
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0,  Fn::GetAZs: !Ref 'AWS::Region']
+      CidrBlock: !Ref PrivateSubnet1CIDR
+      Ipv6CidrBlock: !Select [ 3, !Cidr [ !Select [ 0, !GetAtt VPC.Ipv6CidrBlocks], 256, 64 ]]
+      Tags:
+        - Key: Name
+          Value: iqn.iO1.LAN.03.1a
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    DependsOn: VpcCidrBlockIpv6
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1,  Fn::GetAZs: !Ref 'AWS::Region']
+      CidrBlock: !Ref PrivateSubnet2CIDR
+      Ipv6CidrBlock: !Select [ 4, !Cidr [ !Select [ 0, !GetAtt VPC.Ipv6CidrBlocks], 256, 64 ]]
+      Tags:
+        - Key: Name
+          Value: iqn.iO1.LAN.04.1b
+
+  PrivateSubnet3:
+    Type: AWS::EC2::Subnet
+    DependsOn: VpcCidrBlockIpv6
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 2,  Fn::GetAZs: !Ref 'AWS::Region']
+      CidrBlock: !Ref PrivateSubnet3CIDR
+      Ipv6CidrBlock: !Select [ 5, !Cidr [ !Select [ 0, !GetAtt VPC.Ipv6CidrBlocks], 256, 64 ]]
+      Tags:
+        - Key: Name
+          Value: iqn.iO1.LAN.05.1c
+
+  # NatGateway1EIP:
+  #   Type: AWS::EC2::EIP
+  #   DependsOn: InternetGatewayAttachment
+  #   Properties:
+  #     Domain: vpc
+
+  # NatGateway2EIP:
+  #   Type: AWS::EC2::EIP
+  #   DependsOn: InternetGatewayAttachment
+  #   Properties:
+  #     Domain: vpc
+
+  # NatGateway1:
+  #   Type: AWS::EC2::NatGateway
+  #   Properties:
+  #     AllocationId: !GetAtt NatGateway1EIP.AllocationId
+  #     SubnetId: !Ref PublicSubnet1
+
+  # NatGateway2:
+  #   Type: AWS::EC2::NatGateway
+  #   Properties:
+  #     AllocationId: !GetAtt NatGateway2EIP.AllocationId
+  #     SubnetId: !Ref PublicSubnet2
+
+  EgressOnlyInternetGateway:
+    Type: AWS::EC2::EgressOnlyInternetGateway
+    Properties:
+      VpcId: !Ref VPC
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: iqn.iO1.WAN
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  DefaultPublicRouteIpv6:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationIpv6CidrBlock: ::/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet2
+
+  PublicSubnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet3
+
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: iqn.iO1.LAN.01
+
+  # DefaultPrivateRoute1:
+  #   Type: AWS::EC2::Route
+  #   Properties:
+  #     RouteTableId: !Ref PrivateRouteTable1
+  #     DestinationCidrBlock: 0.0.0.0/0
+  #     NatGatewayId: !Ref NatGateway1
+
+  DefaultPrivateRoute1Ipv6:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationIpv6CidrBlock: ::/0
+      EgressOnlyInternetGatewayId: !Ref EgressOnlyInternetGateway
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      SubnetId: !Ref PrivateSubnet1
+
+  PrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: iqn.iO1.LAN.02
+
+  # DefaultPrivateRoute2:
+  #   Type: AWS::EC2::Route
+  #   Properties:
+  #     RouteTableId: !Ref PrivateRouteTable2
+  #     DestinationCidrBlock: 0.0.0.0/0
+  #     NatGatewayId: !Ref NatGateway2
+
+  DefaultPrivateRoute2Ipv6:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationIpv6CidrBlock: ::/0
+      EgressOnlyInternetGatewayId: !Ref EgressOnlyInternetGateway
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      SubnetId: !Ref PrivateSubnet2
+
+  VPCSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      VpcId: !Ref VPC
+      GroupDescription: All
+      SecurityGroupIngress:
+        - Description: 'Allow SSH IPv4 IN'
+          IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: '0.0.0.0/0'
+        - Description: 'Allow SSH IPv6 IN'
+          IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIpv6: ::/0
+        - Description: 'Allow SSH IPv4 IN'
+          IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+          CidrIp: '0.0.0.0/0'
+        - Description: 'Allow SSH IPv4 IN'
+          IpProtocol: tcp
+          FromPort: '1500'
+          ToPort: '1500'
+          CidrIp: '172.0.0.0/16'
+
+  VPCSecurityGroupGroupSelfReferenceRule:
+    Type: "AWS::EC2::SecurityGroupIngress"
+    Properties:
+      GroupId: !Ref VPCSecurityGroup
+      IpProtocol: '-1'
+      SourceSecurityGroupId: !Ref VPCSecurityGroup
+
+  VPCSecurityGroupSelfReferenceRule:
+    Type: "AWS::EC2::SecurityGroupIngress"
+    Properties:
+      GroupId: !Ref VPCSecurityGroup
+      IpProtocol: '-1'
+      SourceSecurityGroupId: !Ref VPCSecurityGroup
+
+  EC2Role:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: webIQEC2SystemsManagerPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'ssm:DescribeAssociation'
+                  - 'ssm:GetDeployablePatchSnapshotForInstance'
+                  - 'ssm:GetDocument'
+                  - 'ssm:DescribeDocument'
+                  - 'ssm:GetManifest'
+                  - 'ssm:GetParameter'
+                  - 'ssm:GetParameters'
+                  - 'ssm:ListAssociations'
+                  - 'ssm:ListInstanceAssociations'
+                  - 'ssm:PutInventory'
+                  - 'ssm:PutComplianceItems'
+                  - 'ssm:PutConfigurePackageResult'
+                  - 'ssm:UpdateAssociationStatus'
+                  - 'ssm:UpdateInstanceAssociationStatus'
+                  - 'ssm:UpdateInstanceInformation'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'ssmmessages:CreateControlChannel'
+                  - 'ssmmessages:CreateDataChannel'
+                  - 'ssmmessages:OpenControlChannel'
+                  - 'ssmmessages:OpenDataChannel'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'ec2messages:AcknowledgeMessage'
+                  - 'ec2messages:DeleteMessage'
+                  - 'ec2messages:FailMessage'
+                  - 'ec2messages:GetEndpoint'
+                  - 'ec2messages:GetMessages'
+                  - 'ec2messages:SendReply'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 's3:*'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'sns:*'
+                Resource: '*'
+  EC2InstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Path: /
+      Roles:
+        - !Ref EC2Role
+  ssminterfaceendpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: "Interface"
+      PrivateDnsEnabled: "True"
+      SubnetIds:
+        # - !Ref PublicSubnet1
+        # - !Ref PublicSubnet2
+        # - !Ref PublicSubnet3
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+        - !Ref PrivateSubnet3
+      SecurityGroupIds:
+        - !Ref VPCSecurityGroup
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ssm
+      VpcId: !Ref VPC
+  ssmec2messagesinterfaceendpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: "Interface"
+      PrivateDnsEnabled: "True"
+      SubnetIds:
+          # - !Ref PublicSubnet1
+          # - !Ref PublicSubnet2
+          # - !Ref PublicSubnet3
+          - !Ref PrivateSubnet1
+          - !Ref PrivateSubnet2
+          - !Ref PrivateSubnet3
+      SecurityGroupIds:
+        - !Ref VPCSecurityGroup
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ec2messages
+      VpcId: !Ref VPC
+  ssmmessagesinterfaceendpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: "Interface"
+      PrivateDnsEnabled: "True"
+      SubnetIds:
+          # - !Ref PublicSubnet1
+          # - !Ref PublicSubnet2
+          # - !Ref PublicSubnet3
+          - !Ref PrivateSubnet1
+          - !Ref PrivateSubnet2
+          - !Ref PrivateSubnet3
+      SecurityGroupIds:
+        - !Ref VPCSecurityGroup
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ssmmessages
+      VpcId: !Ref VPC
+
+
+# VPC Endpoints
+  # Resources:
+  # CWLInterfaceEndpoint:
+  #   Type: 'AWS::EC2::VPCEndpoint'
+  #   Properties:
+  #     VpcEndpointType: 'Interface'
+  #     ServiceName: !Sub 'com.amazonaws.${AWS::Region}.logs'
+  #     VpcId: !Ref VPC
+  #     PrivateDnsEnabled: true
+  #     SubnetIds:
+  #       - !Ref PrivateSubnet1
+  #       - !Ref PrivateSubnet2
+  #     SecurityGroupIds:
+  #       - !Ref VPCSecurityGroup
+
+  # s3InterfaceEndpoint:
+  #   Type: 'AWS::EC2::VPCEndpoint'
+  #   Properties:
+  #     VpcEndpointType: 'Interface'
+  #     ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+  #     VpcId: !Ref VPC
+  #     EnableDnsSupport: true
+  #     EnableDnsHostnames: true
+  #     SubnetIds:
+  #       - !Ref PrivateSubnet1
+  #       - !Ref PrivateSubnet2
+  #     SecurityGroupIds:
+  #       - !Ref VPCSecurityGroup
+
+  S3GatewayEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - !Ref PrivateRouteTable1
+      VpcId: !Ref VPC
+
+  S3InterfaceEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+      PrivateDnsEnabled: true
+      VpcEndpointType: Interface
+      SecurityGroupIds:
+        - !Ref VPCSecurityGroup
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      VpcId: !Ref VPC
+
+  EC2InterfaceEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ec2'
+      PrivateDnsEnabled: true
+      VpcEndpointType: Interface
+      SecurityGroupIds:
+        - !Ref VPCSecurityGroup
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      VpcId: !Ref VPC
+
+  DRSInterfaceEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.drs'
+      PrivateDnsEnabled: true
+      VpcEndpointType: Interface
+      SecurityGroupIds:
+        - !Ref VPCSecurityGroup
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      VpcId: !Ref VPC
+
+  # vpcPeeringConnection:
+  #   Type: AWS::EC2::VPCPeeringConnection
+  #   Properties:
+  #     PeerRegion: us-east-1
+  #     VpcId: vpc-I34343443whatever
+  #     PeerVpcId: !Ref VPC
+  #     Tags:
+  #     - Key: Name
+  #       Value: iQn::iO2.peering
+  #
+
+
+
+
+
+      # VpcId: !Ref VPC
+      # EnableDnsSupport: true
+      # EnableDnsHostnames: true
+      # SubnetIds:
+      #   - !Ref PrivateSubnet1
+      #   - !Ref PrivateSubnet2
+      # SecurityGroupIds:
+      #   - !Ref VPCSecurityGroup
+  #
+  # drsGateWayEndpoint:
+  #   Type: 'AWS::EC2::VPCEndpoint'
+  #   Properties:
+  #     VpcEndpointType: 'Interface'
+  #     ServiceName: !Sub 'com.amazonaws.${AWS::Region}.drs'
+  #     VpcId: !Ref VPC
+  #     EnableDnsSupport: true
+  #     EnableDnsHostnames: true
+  #     SubnetIds:
+  #       - !Ref PrivateSubnet1
+  #       - !Ref PrivateSubnet2
+  #     SecurityGroupIds:
+  #       - !Ref VPCSecurityGroup
+  # # # myVPC:
+  #   Type: 'AWS::EC2::VPC'
+  #   Properties:
+  #     CidrBlock: 10.0.0.0/16
+  #     EnableDnsSupport: true
+  #     EnableDnsHostnames: true
+  #     Tags:
+  #       - Key: 'Name'
+  #         Value: 'myVPC'
+  # subnetA:
+  #   Type: 'AWS::EC2::Subnet'
+  #   Properties:
+  #     VpcId: !Ref myVPC
+  #     CidrBlock: '10.0.1.0/24'
+  #     AvailabilityZone: !Select [ 0, !GetAZs ]
+  # subnetB:
+  #   Type: 'AWS::EC2::Subnet'
+  #   Properties:
+  #     VpcId: !Ref myVPC
+  #     CidrBlock: '10.0.2.0/24'
+  #     AvailabilityZone: !Select [ 1, !GetAZs ]
+  # mySecurityGroup:
+  #   Type: 'AWS::EC2::SecurityGroup'
+  #   Properties:
+  #     GroupDescription: 'Allow HTTPS traffic from the VPC'
+  #     VpcId: !Ref myVPC
+  #     SecurityGroupIngress:
+  #       - IpProtocol: tcp
+  #         FromPort: 443
+  #         ToPort: 443
+  #         CidrIp: !GetAtt myVPC.CidrBlock
+
+#   WebServerSecurityGroup:
+#     Type: AWS::EC2::SecurityGroup
+#     Properties:
+#       GroupName: "web-server-sg"
+#       GroupDescription: "Security Group for Web Servers"
+#       VpcId: !Ref VPC
+#       SecurityGroupIngress:
+#       - IpProtocol: tcp
+#         SourceSecurityGroupId: !Ref ALBSecurityGroup
+#         FromPort: 80
+#         ToPort: 80
+
+#   # ALB
+#   ALBListener:
+#     Type: AWS::ElasticLoadBalancingV2::Listener
+#     Properties:
+#       DefaultActions:
+#         - Type: forward
+#           TargetGroupArn:
+#             Ref: WebServerTargetGroup
+#       LoadBalancerArn:
+#           Ref: ApplicationLoadBalancer
+#       Port: 80
+#       Protocol: HTTP
+
+#   ApplicationLoadBalancer:
+#     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+#     Properties:
+#       Scheme: internet-facing
+#       IpAddressType: dualstack
+#       Subnets:
+#       - Ref: PublicSubnet1
+#       - Ref: PublicSubnet2
+#       SecurityGroups:
+#       - Ref: ALBSecurityGroup
+
+# #  ALB Security Group with Allowed IPs
+#   ALBSecurityGroup:
+#     Type: AWS::EC2::SecurityGroup
+#     Properties:
+#         GroupDescription: 'alb-with-ipv6-support'
+#         VpcId:
+#           Ref: VPC
+#         SecurityGroupIngress:
+#             - IpProtocol: tcp
+#               CidrIpv6: ::/0
+#               FromPort: 80
+#               ToPort: 80
+#             - IpProtocol: tcp
+#               CidrIp: 0.0.0.0/0
+#               FromPort: 80
+#               ToPort: 80
+# # iO1. Octo Security Group
+#   iO1.Octo:
+#     Type: AWS::EC2::SecurityGroup
+#     Properties:
+#         GroupDescription: 'iO1. Octo SSH Access'
+#         VpcId:
+#           Ref: VPC
+#         SecurityGroupIngress:
+#             - IpProtocol: tcp
+#               CidrIpv6: ::/0
+#               FromPort: 22
+#               ToPort: 22
+#             - IpProtocol: tcp
+#               CidrIp: 0.0.0.0/0
+#               FromPort: 22
+#               ToPort: 22
+
+#   WebServerTargetGroup:
+#     Type: AWS::ElasticLoadBalancingV2::TargetGroup
+#     Properties:
+#       HealthCheckIntervalSeconds: 5
+#       HealthCheckProtocol: HTTP
+#       HealthCheckTimeoutSeconds: 3
+#       HealthyThresholdCount: 3
+#       Matcher:
+#         HttpCode: '200'
+#       Name: WebServerTargetGroup
+#       Port: 80
+#       Protocol: HTTP
+#       TargetGroupAttributes:
+#       - Key: deregistration_delay.timeout_seconds
+#         Value: '10'
+#       UnhealthyThresholdCount: 3
+#       VpcId:
+#         Ref: 'VPC'
+
+#   LaunchConfigWebServer:
+#     Type: AWS::AutoScaling::LaunchConfiguration
+#     Properties:
+#       ImageId: !Ref LatestLinux2AmiId
+#       IamInstanceProfile: !Ref WebServerInstanceProfile
+#       SecurityGroups:
+#       - Ref: WebServerSecurityGroup
+#       InstanceType: t3.micro
+#       UserData: !Base64 |
+#         #!/bin/bash -x
+#         yum update -y
+#         yum install httpd -y
+#         sudo amazon-linux-extras install -y php7.2
+#         service httpd start
+#         chkconfig httpd on
+#         cd /var/www/html
+#         cat <<'EOT' >> /var/www/html/index.php
+#         <?php
+#         echo 'REMOTE_ADDR: ';
+#         print_r($_SERVER['REMOTE_ADDR']);
+#         exit;
+#         ?>
+#         EOT
+#         cat <<'EOT' >> /etc/httpd/conf.d/log.conf
+#         RemoteIPHeader X-Forwarded-For
+#         LogFormat "%{X-Forwarded-For}i %h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\ " combined
+#         EOT
+#         service httpd restart
+#       EbsOptimized: "true"
+
+
+#   AutoScalingWebServer:
+#     Type: AWS::AutoScaling::AutoScalingGroup
+#     Properties:
+#       VPCZoneIdentifier:
+#         - !Ref PrivateSubnet1
+#         - !Ref PrivateSubnet2
+#       LaunchConfigurationName: !Ref LaunchConfigWebServer
+#       MinSize: '1'
+#       MaxSize: '1'
+#       HealthCheckGracePeriod: 300
+#       MaxInstanceLifetime: 2592000
+#       TargetGroupARNs:
+#         - !Ref WebServerTargetGroup
+#       Tags:
+#         - Key: Name
+#           PropagateAtLaunch: True
+#           Value:
+#             Fn::Join:
+#               - ': '
+#               - [!Ref ResourceName, 'Web Server']
+
+#   ### WebServer  IAM Role
+#   WebServerRole:
+#     Type: AWS::IAM::Role
+#     Properties:
+#       RoleName:
+#         Fn::Join:
+#           - '-'
+#           - ['webserver-role', !Ref "AWS::Region"]
+#       AssumeRolePolicyDocument:
+#         Version: 2012-10-17
+#         Statement:
+#           -
+#             Effect: Allow
+#             Principal:
+#               Service:
+#                 - ec2.amazonaws.com
+#             Action:
+#               - sts:AssumeRole
+#       Path: /
+#       ManagedPolicyArns:
+#       - arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM
+#       Policies:
+#         -
+#           PolicyName: !Join [ -, ['webserver-policy', !Ref "AWS::Region"] ]
+#           PolicyDocument:
+#             Version: 2012-10-17
+#             Statement:
+#               -
+#                 Effect: Allow
+#                 Action:
+#                   - ssm:GetParameter
+#                   - ssm:GetParameters
+#                   - ssm:DescribeParameters
+#                 Resource:
+#                   Fn::Join:
+#                   - ':'
+#                   - ["arn:aws:ssm", !Ref "AWS::Region", !Ref "AWS::AccountId", "*"]
+
+#   WebServerInstanceProfile:
+#     Type: AWS::IAM::InstanceProfile
+#     Properties:
+#       InstanceProfileName:
+#         Fn::Join:
+#           - '-'
+#           - ['webserver-profile', !Ref "AWS::Region"]
+#       Path: /
+#       Roles:
+#         - !Ref WebServerRole
+
+#   TestServerSecurityGroup:
+#     Type: AWS::EC2::SecurityGroup
+#     Properties:
+#       GroupName: "test-server-sg"
+#       GroupDescription: "Security Group for Test Server"
+#       VpcId: !Ref VPC
+
+#   TestServer:
+#     Type: AWS::EC2::Instance
+#     Properties:
+#       IamInstanceProfile: !Ref WebServerInstanceProfile
+#       InstanceType: t3.micro
+#       ImageId: !Ref LatestLinux2AmiId
+#       NetworkInterfaces:
+#         - AssociatePublicIpAddress: 'true'
+#           DeviceIndex: '0'
+#           Ipv6AddressCount: 1
+#           GroupSet:
+#             - !Ref TestServerSecurityGroup
+#           SubnetId:
+#             Ref: PublicSubnet1
+#       Tags:
+#         - Key: Name
+#           Value:
+#             Fn::Join:
+#               - ': '
+#               - [!Ref ResourceName, 'Test Server']
+
+# Outputs:
+#   ALBDNSName:
+#     Description: "The DNS name for the load balancer."
+#     Value: !GetAtt ApplicationLoadBalancer.DNSName
